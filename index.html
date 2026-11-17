@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>どんぐり計算機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        *{user-select:none;-webkit-tap-highlight-color:transparent}
+        input{user-select:text}
+        body{font-family:'Hiragino Sans','Meiryo',sans-serif;background:#0f172a;color:#f8fafc;margin:0;overflow-x:hidden}
+        ._sq{aspect-ratio:1/1;width:100%;border-radius:18px;overflow:hidden;padding:0;background:#0f172a;transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s ease}
+        ._it:hover ._sq{transform:translateY(-5px) scale(1.03);box-shadow:0 18px 26px -8px rgba(0,0,0,.55)}
+        ._it:active ._sq{transform:scale(.96)}
+        ._sq img{width:100%;height:100%;object-fit:contain;display:block;padding:6px}
+        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(148,163,184,.3);border-radius:9999px}
+        #particle-canvas{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+        
+        ._tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) scale(.95);background:rgba(15,23,42,.98);border:1px solid rgba(148,163,184,.3);color:#f8fafc;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:500;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:100;box-shadow:0 10px 24px -8px rgba(0,0,0,.8)}
+        ._it:hover ._tip{opacity:1;transform:translateX(-50%) scale(1)}
+        ._tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:rgba(15,23,42,.98)}
+        
+        ._card{transition:transform .2s ease}
+        ._card:hover{transform:translateY(-4px)}
+        ._card ._title{transition:color .2s ease}
+        ._card:hover ._title{color:#38bdf8}
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+    <canvas id="particle-canvas"></canvas>
+    
+    <div id="_a" class="flex items-center justify-center min-h-screen p-4 relative z-10">
+        <div class="w-full max-w-xs sm:max-w-sm bg-slate-900/90 border border-slate-700/60 rounded-3xl p-5 shadow-2xl backdrop-blur-md transition-all duration-300">
+            <div class="bg-slate-950/80 rounded-2xl p-4 mb-4 text-right border border-slate-800/80 shadow-inner">
+                <div id="_b" class="text-slate-400 text-xs sm:text-sm h-5 overflow-hidden tracking-wider"></div>
+                <div id="_c" class="text-3xl sm:text-4xl font-semibold text-white truncate mt-1">0</div>
+            </div>
+            <div id="_d" class="grid grid-cols-4 gap-2.5 sm:gap-3"></div>
+        </div>
+    </div>
+    
+    <div id="_e" class="hidden min-h-screen bg-gradient-to-br from-[#0b132b] via-[#1c2541] to-[#0f172a] pb-16 transition-opacity duration-300 opacity-0 relative z-10"></div>
+
+    <script type="module">
+        const _k = 0x2a;
+        const _d = (a) => a.map(x => String.fromCharCode(x ^ _k)).join('');
+        const _el = (i) => document.getElementById(i);
+
+        const _vA = _el(_d([0x75,0x4b]));
+        const _vB = _el(_d([0x75,0x48]));
+        const _vC = _el(_d([0x75,0x49]));
+        const _vD = _el(_d([0x75,0x4e]));
+        const _vE = _el(_d([0x75,0x4f]));
+
+        let _ex = '', _dn = false, _gm = [], _kw = '';
+
+        // ===== ここにゲームを埋め込む =====
+        // { n: 名前, u: URL, i: アイコン(絵文字 or 画像URL), t: 並び順(大きいほど上) }
+        _gm = [
+            { n: 'ブロック崩し', u: 'https://example.com/breakout', i: '🧱', t: 5 },
+            { n: 'スネーク', u: 'https://example.com/snake', i: '🐍', t: 4 },
+            { n: '2048', u: 'https://example.com/2048', i: '🔢', t: 3 },
+            { n: 'テトリス', u: 'https://example.com/tetris', i: '🟦', t: 2 },
+            { n: 'マインスイーパー', u: 'https://example.com/minesweeper', i: '💣', t: 1 },
+        ];
+
+        // ===== 計算機 =====
+        const _evalExpr = (s) => {
+            const t = s.replace(/×/g, '*').replace(/÷/g, '/');
+            if (!/^[0-9+\-*/().]+$/.test(t)) return NaN;
+            try { return Number(Function('"use strict";return(' + t + ')')()); } catch (_e) { return NaN; }
+        };
+        const _fmtNum = (n) => Number.isFinite(n) ? String(Math.round(n * 1e10) / 1e10) : 'エラー';
+
+        const _go = () => {
+            const _t1 = _d([0x1c,0x01,0x13]);
+            const _t2 = _d([0x1c,0x01,0x13,0x1c,0x1d,0x01,0x1c,0x13]);
+            if (_ex === _t1) { _op(); return; }
+            if (_ex === _t2) { _op(); return; }
+            if (!_ex) return;
+            const _rs = _evalExpr(_ex);
+            _vB.textContent = _ex;
+            if (Number.isFinite(_rs)) {
+                const _tx = _fmtNum(_rs);
+                _vC.textContent = _tx; _ex = _tx; _dn = true;
+            } else {
+                _vC.textContent = 'エラー'; _ex = ''; _dn = true;
+            }
+        };
+
+        const _in = (c) => {
+            if (c === 'C') { _ex = ''; _vB.textContent = ''; _vC.textContent = '0'; _dn = false; return; }
+            if (c === '⌫') {
+                if (_dn) { _ex = ''; _vB.textContent = ''; _vC.textContent = '0'; _dn = false; return; }
+                _ex = _ex.slice(0, -1); _vC.textContent = _ex || '0'; return;
+            }
+            if (c === '=') { _go(); return; }
+            if (c === '±') {
+                if (!_ex) { _ex = '-'; _vC.textContent = _ex; return; }
+                const _ops = ['+', '-', '×', '÷'];
+                const _lastChar = _ex.slice(-1);
+                if (_ops.includes(_lastChar)) { if (_lastChar !== '-') { _ex += '-'; } _vC.textContent = _ex; return; }
+                const _segments = _ex.split(/([+\-×÷])/);
+                const _lastSegIndex = _segments.length - 1;
+                const _lastSeg = _segments[_lastSegIndex];
+                if (_lastSeg.startsWith('-')) { _segments[_lastSegIndex] = _lastSeg.slice(1); }
+                else { _segments[_lastSegIndex] = '-' + _lastSeg; }
+                _ex = _segments.join(''); _vC.textContent = _ex; return;
+            }
+            const _ops = ['+', '-', '×', '÷'];
+            if (_dn && !_ops.includes(c) && c !== '.') { _ex = ''; _vB.textContent = ''; _dn = false; }
+            if (c === '.') {
+                const _segments = _ex.split(/([+\-×÷])/);
+                const _lastSeg = _segments[_segments.length - 1];
+                if (_lastSeg.includes('.')) return;
+                if (!_lastSeg) { _ex += '0.'; _vC.textContent = _ex; return; }
+            }
+            if (_ops.includes(c)) {
+                if (!_ex) { if (c === '-') { _ex = '-'; _vC.textContent = _ex; } return; }
+                const _lastChar = _ex.slice(-1);
+                if (_ops.includes(_lastChar)) {
+                    if (c === '-' && _lastChar !== '-') { _ex += '-'; _vC.textContent = _ex; return; }
+                    _ex = _ex.slice(0, -1) + c; _vC.textContent = _ex; return;
+                }
+                _dn = false; _ex += c; _vC.textContent = _ex;
+            } else { _ex += c; _vC.textContent = _ex; }
+        };
+
+        [['C','⌫','±','÷'],['7','8','9','×'],['4','5','6','-'],['1','2','3','+'],['0','.','=']].forEach(r => r.forEach(k => {
+            const b = document.createElement('button');
+            b.textContent = k;
+            const isO = ['÷','×','-','+','='].includes(k), isF = ['C','⌫','±'].includes(k);
+            b.className = (k === '0' ? 'col-span-2 ' : '') + 'h-14 sm:h-16 rounded-2xl font-medium text-lg sm:text-xl transition active:scale-95 flex items-center justify-center shadow-sm ' + (
+                k === '=' ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20' :
+                isO ? 'bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700/50' :
+                isF ? 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300' :
+                'bg-slate-800/40 hover:bg-slate-700/50 text-white border border-slate-800'
+            );
+            b.onclick = () => _in(k);
+            _vD.appendChild(b);
+        }));
+
+        // ===== ユーティリティ =====
+        const _esc = (t) => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+        const _url = (u) => { const t = String(u || '').trim(); if (!t) return '#'; return /^https?:\/\//i.test(t) ? t : 'https://' + t; };
+
+        const _nm = (s) => String(s || '').normalize('NFKC').toLowerCase().replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/[\s\u3000・\-_]+/g, '');
+        const _lv = (a, b) => {
+            const m = a.length, n = b.length;
+            if (!m) return n; if (!n) return m;
+            let v = Array.from({ length: n + 1 }, (_, j) => j);
+            for (let i = 1; i <= m; i++) {
+                let p = i;
+                for (let j = 1; j <= n; j++) {
+                    const c = a[i - 1] === b[j - 1] ? v[j - 1] : Math.min(v[j - 1], p, v[j]) + 1;
+                    v[j - 1] = p; p = c;
+                }
+                v[n] = p;
+            }
+            return v[n];
+        };
+        const _fz = (q, t) => {
+            const a = _nm(q), b = _nm(t);
+            if (!a) return 1; if (!b) return 0;
+            if (b === a) return 100;
+            if (b.startsWith(a)) return 92 - (b.length - a.length) * 0.1;
+            const ix = b.indexOf(a);
+            if (ix !== -1) return 84 - ix * 0.5;
+            let qi = 0, sc = 0, st = 0;
+            for (let bi = 0; bi < b.length && qi < a.length; bi++) {
+                if (b[bi] === a[qi]) { st++; sc += 10 + st * 4; qi++; } else { st = 0; }
+            }
+            if (qi === a.length) return Math.min(79, 45 + sc / (b.length + 1) * 5);
+            if (a.length >= 2) {
+                const w = a.length; let bd = 99;
+                for (let i = 0; i <= Math.max(0, b.length - w); i++) {
+                    const sub = b.slice(i, i + w), d = _lv(a, sub);
+                    if (d < bd) bd = d;
+                }
+                const dFull = _lv(a, b);
+                if (dFull < bd) bd = dFull;
+                const mx = Math.max(1, Math.floor(a.length * 0.45));
+                if (bd <= mx) return 42 - (bd / mx) * 20;
+            }
+            return 0;
+        };
+
+        // ===== 描画 =====
+        const _rnd = () => {
+            const _gr = _el('_g');
+            if (!_gr) return;
+            const _q = _kw.trim();
+            const _ls = _q ? _gm.map(x => ({ x, s: _fz(_q, x.n) })).filter(o => o.s > 0).sort((a, b) => b.s - a.s || (b.x.t || 0) - (a.x.t || 0)).map(o => o.x) : _gm;
+            _gr.innerHTML = '';
+            if (!_ls.length) {
+                _gr.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-24 text-slate-400"><div class="w-16 h-16 rounded-3xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-2xl mb-3">🎮</div><p class="text-sm font-medium text-slate-300">${_gm.length ? '該当するゲームが見つかりません' : 'まだゲームがありません'}</p><p class="text-xs text-slate-500 mt-1">${_gm.length ? '別のキーワードで検索してください' : ''}</p></div>`;
+                return;
+            }
+            _ls.forEach((it) => {
+                const _wr = document.createElement('div');
+                _wr.className = 'relative group';
+
+                const _cd = document.createElement('a');
+                _cd.href = _url(it.u);
+                _cd.target = '_blank';
+                _cd.rel = 'noopener noreferrer';
+                _cd.className = '_it _card flex flex-col items-center cursor-pointer text-white no-underline';
+
+                const _ic = (it.i || '').trim();
+                const _imgHtml = /^(https?:\/\/|data:image\/)/i.test(_ic)
+                    ? `<img src="${_esc(_ic)}" alt="" class="w-full h-full object-contain block p-2" onerror="this.outerHTML='<div class=\\'w-full h-full flex items-center justify-center bg-slate-800 text-4xl sm:text-5xl\\'>🎮</div>'">`
+                    : `<div class="w-full h-full flex items-center justify-center bg-slate-800 text-4xl sm:text-5xl">${_esc(_ic || '🎮')}</div>`;
+
+                _cd.innerHTML = `
+                    <div class="_sq shadow-lg border border-white/10 bg-slate-900/80">
+                        ${_imgHtml}
+                    </div>
+                    <div class="_tip">${_esc(it.n)}</div>
+                    <div class="_title w-full text-center font-semibold text-xs sm:text-sm text-slate-200 truncate mt-2 px-1 transition-colors">${_esc(it.n)}</div>
+                `;
+
+                _wr.appendChild(_cd);
+                _gr.appendChild(_wr);
+            });
+        };
+
+        // ===== ポータル画面 =====
+        const _op = () => {
+            _vA.classList.add('hidden');
+            _vE.innerHTML = `<header class="sticky top-0 z-30 bg-slate-950/75 backdrop-blur-xl border-b border-white/10"><div class="max-w-6xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-2.5"><div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-400 to-indigo-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/30">P</div><div><div class="flex items-center gap-2"><h1 class="font-extrabold text-lg tracking-tight text-white leading-none">PLAY PORTAL</h1></div><span class="text-[11px] text-sky-400 font-medium">ONLINE ARCADE</span></div></div><div class="flex items-center gap-2 flex-1 sm:flex-initial justify-end"><div class="relative flex-1 sm:w-64"><input id="_sr" type="text" placeholder="あいまい検索..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-2xl pl-9 pr-8 py-2 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-sky-400"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span><button id="_sc" type="button" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">✕</button></div><button id="_lk" title="電卓に戻る" class="w-9 h-9 rounded-2xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition shrink-0">🔒</button></div></div></header><main class="max-w-6xl mx-auto px-4 pt-6"><div id="_g" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5 sm:gap-6"></div></main>`;
+            _vE.classList.remove('hidden');
+            requestAnimationFrame(() => _vE.classList.remove('opacity-0'));
+
+            const _sr = _el('_sr'), _sc = _el('_sc');
+            _sr.oninput = (e) => { _kw = e.target.value; _sc.classList.toggle('hidden', !_kw); _rnd(); };
+            _sc.onclick = () => { _kw = ''; _sr.value = ''; _sc.classList.add('hidden'); _rnd(); };
+            _el('_lk').onclick = () => {
+                _vE.classList.add('opacity-0');
+                setTimeout(() => {
+                    _vE.classList.add('hidden');
+                    _ex = ''; _vB.textContent = ''; _vC.textContent = '0';
+                    _vA.classList.remove('hidden');
+                }, 250);
+            };
+
+            _rnd();
+        };
+
+        // ===== パーティクル =====
+        const _pc = _el('particle-canvas'), _px = _pc.getContext('2d');
+        let _pts = [];
+        const _rsz = () => { _pc.width = innerWidth; _pc.height = innerHeight; };
+        addEventListener('resize', _rsz);
+        _rsz();
+        class _Pt {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * _pc.width;
+                this.y = _pc.height + 10;
+                this.s = Math.random() * 1.5 + 0.5;
+                this.v = Math.random() * 0.5 + 0.2;
+                this.a = Math.random() * 0.5 + 0.2;
+            }
+            update() { this.y -= this.v; if (this.y < -10) this.reset(); }
+            draw() {
+                _px.fillStyle = `rgba(255,255,255,${this.a})`;
+                _px.beginPath(); _px.arc(this.x, this.y, this.s, 0, Math.PI * 2); _px.fill();
+            }
+        }
+        for (let i = 0; i < 60; i++) {
+            const p = new _Pt(); p.y = Math.random() * _pc.height; _pts.push(p);
+        }
+        const _anim = () => {
+            _px.clearRect(0, 0, _pc.width, _pc.height);
+            _pts.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(_anim);
+        };
+        _anim();
+
+    </script>
+</body>
+</html>

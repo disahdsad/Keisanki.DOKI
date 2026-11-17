@@ -12,7 +12,7 @@
         ._sq{aspect-ratio:1/1;width:100%;border-radius:18px;overflow:hidden;padding:0;background:#0f172a;transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s ease}
         ._it:hover ._sq{transform:translateY(-5px) scale(1.03);box-shadow:0 18px 26px -8px rgba(0,0,0,.55)}
         ._it:active ._sq{transform:scale(.96)}
-        ._sq img{width:100%;height:100%;object-fit:contain;display:block;padding:6px}
+        ._sq img{width:100%;height:100%;object-fit:cover;display:block}
         ::-webkit-scrollbar{width:6px}
         ::-webkit-scrollbar-track{background:transparent}
         ::-webkit-scrollbar-thumb{background:rgba(148,163,184,.3);border-radius:9999px}
@@ -57,13 +57,13 @@
         let _ex = '', _dn = false, _gm = [], _kw = '';
 
         // ===== ここにゲームを埋め込む =====
-        // { n: 名前, u: URL, i: アイコン(絵文字 or 画像URL), t: 並び順(大きいほど上) }
+        // n: 名前, u: URL, i: アイコン画像URL（必須）, t: 並び順(大きいほど上)
         _gm = [
-            { n: 'ブロック崩し', u: 'https://example.com/breakout', i: '🧱', t: 5 },
-            { n: 'スネーク', u: 'https://example.com/snake', i: '🐍', t: 4 },
-            { n: '2048', u: 'https://example.com/2048', i: '🔢', t: 3 },
-            { n: 'テトリス', u: 'https://example.com/tetris', i: '🟦', t: 2 },
-            { n: 'マインスイーパー', u: 'https://example.com/minesweeper', i: '💣', t: 1 },
+            { n: 'ブロック崩し', u: 'https://example.com/breakout', i: 'https://picsum.photos/seed/breakout/200', t: 5 },
+            { n: 'スネーク', u: 'https://example.com/snake', i: 'https://picsum.photos/seed/snake/200', t: 4 },
+            { n: '2048', u: 'https://example.com/2048', i: 'https://picsum.photos/seed/2048/200', t: 3 },
+            { n: 'テトリス', u: 'https://example.com/tetris', i: 'https://picsum.photos/seed/tetris/200', t: 2 },
+            { n: 'マインスイーパー', u: 'https://example.com/minesweeper', i: 'https://picsum.photos/seed/minesweeper/200', t: 1 },
         ];
 
         // ===== 計算機 =====
@@ -209,9 +209,10 @@
                 _cd.className = '_it _card flex flex-col items-center cursor-pointer text-white no-underline';
 
                 const _ic = (it.i || '').trim();
-                const _imgHtml = /^(https?:\/\/|data:image\/)/i.test(_ic)
-                    ? `<img src="${_esc(_ic)}" alt="" class="w-full h-full object-contain block p-2" onerror="this.outerHTML='<div class=\\'w-full h-full flex items-center justify-center bg-slate-800 text-4xl sm:text-5xl\\'>🎮</div>'">`
-                    : `<div class="w-full h-full flex items-center justify-center bg-slate-800 text-4xl sm:text-5xl">${_esc(_ic || '🎮')}</div>`;
+                // 画像URL前提。読み込み失敗時は🎮にフォールバック
+                const _imgHtml = _ic
+                    ? `<img src="${_esc(_ic)}" alt="${_esc(it.n)}" loading="lazy" class="w-full h-full object-cover block" onerror="this.outerHTML='<div class=\\'w-full h-full flex items-center justify-center bg-slate-800 text-4xl sm:text-5xl\\'>🎮</div>'">`
+                    : `<div class="w-full h-full flex items-center justify-center bg-slate-800 text-4xl sm:text-5xl">🎮</div>`;
 
                 _cd.innerHTML = `
                     <div class="_sq shadow-lg border border-white/10 bg-slate-900/80">
